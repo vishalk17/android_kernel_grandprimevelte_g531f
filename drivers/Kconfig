@@ -179,4 +179,7 @@ source "drivers/sensors/Kconfig"
 source "drivers/marvell/Kconfig"
 
 source "drivers/samsung/Kconfig"
+
+source "drivers/android/Kconfig"
+
 endmenu

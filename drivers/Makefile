@@ -161,3 +161,4 @@ obj-$(CONFIG_POWERCAP)		+= powercap/
 obj-$(CONFIG_SENSORS_CORE)      += sensors/
 obj-$(CONFIG_MARVELL_DRIVERS)	+= marvell/
 obj-y				+= samsung/
+obj-$(CONFIG_ANDROID)		+= android/
