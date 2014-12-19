@@ -99,23 +99,18 @@ int __cpu_suspend(unsigned long arg, int (*fn)(unsigned long))
 	 */
 	ret = __cpu_suspend_enter(arg, fn);
 	if (ret == 0) {
-
 		/*
-		 * This code usually runs under the CPU startup "thread",
-		 * from cpu_idle_loop(), and active_mm *is* init_mm,
-		 * see secondary_start_kernel().
-		 * In arm64 init_mm.pgd refers to the kernel table
-		 * and can be used for TTBR1_EL1 only, not for TTBR0_EL1,
-		 * otherwise speculative accesses to user addresses
-		 * may fetch kernel translations into TLB for these addresses.
-		 * Such wrong entries may later hard user operation
-		 * because they have nG=0, so affect any ASID.
-		 * See also cpu_set_reserved_ttbr0 in secondary_start_kernel.
+		 * We are resuming from reset with TTBR0_EL1 set to the
+		 * idmap to enable the MMU; restore the active_mm mappings in
+		 * TTBR0_EL1 unless the active_mm == &init_mm, in which case
+		 * the thread entered __cpu_suspend with TTBR0_EL1 set to
+		 * reserved TTBR0 page tables and should be restored as such.
 		 */
-		if (mm != &init_mm)
-			cpu_switch_mm(mm->pgd, mm);
-		else
+		if (mm == &init_mm)
 			cpu_set_reserved_ttbr0();
+		else
+			cpu_switch_mm(mm->pgd, mm);
+
 		flush_tlb_all();
 
 		/*
