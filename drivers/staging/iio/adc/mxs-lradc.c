@@ -590,7 +590,6 @@ static irqreturn_t mxs_lradc_handle_irq(int irq, void *data)
 			schedule_work(&lradc->ts_work);
 	}
 
-	if (iio_buffer_enabled(iio))
 	if (iio_buffer_enabled(iio)) {
 		if (reg & lradc->buffer_vchans)
 			iio_trigger_poll(iio->trig, iio_get_time_ns());
