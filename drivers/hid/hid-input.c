@@ -192,7 +192,6 @@ static int hidinput_setkeycode(struct input_dev *dev,
 	return -EINVAL;
 }
 
-
 /**
  * hidinput_calc_abs_res - calculate an absolute axis resolution
  * @field: the HID report field to calculate resolution for
@@ -235,17 +234,23 @@ __s32 hidinput_calc_abs_res(const struct hid_field *field, __u16 code)
 	case ABS_MT_TOOL_Y:
 	case ABS_MT_TOUCH_MAJOR:
 	case ABS_MT_TOUCH_MINOR:
-		if (field->unit == 0x11) {		/* If centimeters */
+		if (field->unit & 0xffffff00)		/* Not a length */
+			return 0;
+		unit_exponent += hid_snto32(field->unit >> 4, 4) - 1;
+		switch (field->unit & 0xf) {
+		case 0x1:				/* If centimeters */
 			/* Convert to millimeters */
 			unit_exponent += 1;
-		} else if (field->unit == 0x13) {	/* If inches */
+			break;
+		case 0x3:				/* If inches */
 			/* Convert to millimeters */
 			prev = physical_extents;
 			physical_extents *= 254;
 			if (physical_extents < prev)
 				return 0;
 			unit_exponent -= 1;
-		} else {
+			break;
+		default:
 			return 0;
 		}
 		break;
@@ -355,11 +360,11 @@ static int hidinput_get_battery_property(struct power_supply *psy,
 					      dev->battery_report_type);
 
 		if (ret != 2) {
-			ret = -ENODATA;
+			if (ret >= 0)
+				ret = -EINVAL;
 			kfree(buf);
 			break;
 		}
-		ret = 0;
 
 		if (dev->battery_min < dev->battery_max &&
 		    buf[1] >= dev->battery_min &&
@@ -721,6 +726,13 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		case 0x06c: map_key_clear(KEY_YELLOW);		break;
 		case 0x06d: map_key_clear(KEY_ZOOM);		break;
 
+		case 0x06f: map_key_clear(KEY_BRIGHTNESSUP);		break;
+		case 0x070: map_key_clear(KEY_BRIGHTNESSDOWN);		break;
+		case 0x072: map_key_clear(KEY_BRIGHTNESS_TOGGLE);	break;
+		case 0x073: map_key_clear(KEY_BRIGHTNESS_MIN);		break;
+		case 0x074: map_key_clear(KEY_BRIGHTNESS_MAX);		break;
+		case 0x075: map_key_clear(KEY_BRIGHTNESS_AUTO);		break;
+
 		case 0x082: map_key_clear(KEY_VIDEO_NEXT);	break;
 		case 0x083: map_key_clear(KEY_LAST);		break;
 		case 0x084: map_key_clear(KEY_ENTER);		break;
@@ -761,6 +773,7 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		case 0x0bf: map_key_clear(KEY_SLOW);		break;
 
 		case 0x0cd: map_key_clear(KEY_PLAYPAUSE);	break;
+		case 0x0cf: map_key_clear(KEY_VOICECOMMAND);	break;
 		case 0x0e0: map_abs_clear(ABS_VOLUME);		break;
 		case 0x0e2: map_key_clear(KEY_MUTE);		break;
 		case 0x0e5: map_key_clear(KEY_BASSBOOST);	break;
@@ -768,6 +781,7 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		case 0x0ea: map_key_clear(KEY_VOLUMEDOWN);	break;
 		case 0x0f5: map_key_clear(KEY_SLOW);		break;
 
+		case 0x181: map_key_clear(KEY_BUTTONCONFIG);	break;
 		case 0x182: map_key_clear(KEY_BOOKMARKS);	break;
 		case 0x183: map_key_clear(KEY_CONFIG);		break;
 		case 0x184: map_key_clear(KEY_WORDPROCESSOR);	break;
@@ -781,6 +795,8 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		case 0x18c: map_key_clear(KEY_VOICEMAIL);	break;
 		case 0x18d: map_key_clear(KEY_ADDRESSBOOK);	break;
 		case 0x18e: map_key_clear(KEY_CALENDAR);	break;
+		case 0x18f: map_key_clear(KEY_TASKMANAGER);	break;
+		case 0x190: map_key_clear(KEY_JOURNAL);		break;
 		case 0x191: map_key_clear(KEY_FINANCE);		break;
 		case 0x192: map_key_clear(KEY_CALC);		break;
 		case 0x193: map_key_clear(KEY_PLAYER);		break;
@@ -789,10 +805,16 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		case 0x199: map_key_clear(KEY_CHAT);		break;
 		case 0x19c: map_key_clear(KEY_LOGOFF);		break;
 		case 0x19e: map_key_clear(KEY_COFFEE);		break;
+		case 0x19f: map_key_clear(KEY_CONTROLPANEL);		break;
+		case 0x1a2: map_key_clear(KEY_APPSELECT);		break;
+		case 0x1a3: map_key_clear(KEY_NEXT);		break;
+		case 0x1a4: map_key_clear(KEY_PREVIOUS);	break;
 		case 0x1a6: map_key_clear(KEY_HELP);		break;
 		case 0x1a7: map_key_clear(KEY_DOCUMENTS);	break;
 		case 0x1ab: map_key_clear(KEY_SPELLCHECK);	break;
 		case 0x1ae: map_key_clear(KEY_KEYBOARD);	break;
+		case 0x1b1: map_key_clear(KEY_SCREENSAVER);		break;
+		case 0x1b4: map_key_clear(KEY_FILE);		break;
 		case 0x1b6: map_key_clear(KEY_IMAGES);		break;
 		case 0x1b7: map_key_clear(KEY_AUDIO);		break;
 		case 0x1b8: map_key_clear(KEY_VIDEO);		break;
@@ -889,6 +911,17 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		default: goto ignore;
 		}
 		break;
+
+#ifdef CONFIG_USB_HMT_SAMSUNG_INPUT
+	case HID_UP_HMTVENDOR:
+		switch (usage->hid & HID_USAGE) {
+		case 0x001: map_key_clear(KEY_START_NOTA_CMD);		break;
+		case 0x002: map_key_clear(KEY_START_TA_CMD);		break;
+		case 0x003: map_key_clear(KEY_ONGOING_TA_CMD);		break;
+		default: goto ignore;
+		}
+		break;
+#endif
 
 	default:
 	unknown:
@@ -1049,14 +1082,9 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 
 	/*
 	 * Ignore out-of-range values as per HID specification,
-	 * section 5.10 and 6.2.25.
-	 *
-	 * The logical_minimum < logical_maximum check is done so that we
-	 * don't unintentionally discard values sent by devices which
-	 * don't specify logical min and max.
+	 * section 5.10 and 6.2.25
 	 */
 	if ((field->flags & HID_MAIN_ITEM_VARIABLE) &&
-	    (field->logical_minimum < field->logical_maximum) &&
 	    (value < field->logical_minimum ||
 	     value > field->logical_maximum)) {
 		dbg_hid("Ignoring out-of-range value %x\n", value);
@@ -1279,7 +1307,7 @@ static struct hid_input *hidinput_allocate(struct hid_device *hid)
 	input_dev->id.vendor  = hid->vendor;
 	input_dev->id.product = hid->product;
 	input_dev->id.version = hid->version;
-	input_dev->dev.parent = &hid->dev;
+	input_dev->dev.parent = hid->dev.parent;
 	hidinput->input = input_dev;
 	list_add_tail(&hidinput->list, &hid->inputs);
 
@@ -1410,8 +1438,9 @@ int hidinput_connect(struct hid_device *hid, unsigned int force)
 				 * UGCI) cram a lot of unrelated inputs into the
 				 * same interface. */
 				hidinput->report = report;
-				if (drv->input_configured)
-					drv->input_configured(hid, hidinput);
+				if (drv->input_configured &&
+				    drv->input_configured(hid, hidinput))
+					goto out_cleanup;
 				if (input_register_device(hidinput->input))
 					goto out_cleanup;
 				hidinput = NULL;
@@ -1432,8 +1461,9 @@ int hidinput_connect(struct hid_device *hid, unsigned int force)
 	}
 
 	if (hidinput) {
-		if (drv->input_configured)
-			drv->input_configured(hid, hidinput);
+		if (drv->input_configured &&
+		    drv->input_configured(hid, hidinput))
+			goto out_cleanup;
 		if (input_register_device(hidinput->input))
 			goto out_cleanup;
 	}

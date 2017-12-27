@@ -2980,6 +2980,7 @@ static struct cfg80211_acl_data *parse_acl_data(struct wiphy *wiphy,
 
 static int nl80211_set_mac_acl(struct sk_buff *skb, struct genl_info *info)
 {
+#if 0
 	struct cfg80211_registered_device *rdev = info->user_ptr[0];
 	struct net_device *dev = info->user_ptr[1];
 	struct cfg80211_acl_data *acl;
@@ -3001,6 +3002,9 @@ static int nl80211_set_mac_acl(struct sk_buff *skb, struct genl_info *info)
 	kfree(acl);
 
 	return err;
+#else
+	return -EOPNOTSUPP;
+#endif
 }
 
 static int nl80211_parse_beacon(struct nlattr *attrs[],
