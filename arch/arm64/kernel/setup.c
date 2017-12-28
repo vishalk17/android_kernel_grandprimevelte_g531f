@@ -516,29 +516,8 @@ static int c_show(struct seq_file *m, void *v)
 #endif
 	}
 
-		seq_printf(m, "BogoMIPS\t: %lu.%02lu\n",
-			   loops_per_jiffy / (500000UL/HZ),
-			   loops_per_jiffy / (5000UL/HZ) % 100);
-
-		/*
-		 * Dump out the common processor features in a single line.
-		 * Userspace should read the hwcaps with getauxval(AT_HWCAP)
-		 * rather than attempting to parse this, but there's a body of
-		 * software which does already (at least for 32-bit).
-		 */
-		seq_puts(m, "Features\t:");
-		if (personality(current->personality) == PER_LINUX32) {
-#ifdef CONFIG_COMPAT
-			for (j = 0; compat_hwcap_str[j]; j++)
-				if (compat_elf_hwcap & (1 << j))
-					seq_printf(m, " %s", compat_hwcap_str[j]);
-#endif /* CONFIG_COMPAT */
-		} else {
-			for (j = 0; hwcap_str[j]; j++)
-				if (elf_hwcap & (1 << j))
-					seq_printf(m, " %s", hwcap_str[j]);
-		}
-		seq_puts(m, "\n");
+	/* dump out the processor features */
+	seq_puts(m, "Features\t: ");
 
 	for (i = 0; hwcap_str[i]; i++)
 		if (elf_hwcap & (1 << i))
