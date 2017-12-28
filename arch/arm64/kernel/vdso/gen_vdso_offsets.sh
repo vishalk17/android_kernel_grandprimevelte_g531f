@@ -1,6 +1,7 @@
 #!/bin/sh
 
 #
+#
 # Match symbols in the DSO that look like VDSO_*; produce a header file
 # of constant offsets into the shared object.
 #
