@@ -350,7 +350,7 @@ CONFIG_CMDLINE="rdinit=/busybox/rdinit console=ttyS0,115200 mem=512M earlyprintk
 CONFIG_CMDLINE_FROM_BOOTLOADER=y
 # CONFIG_CMDLINE_EXTEND is not set
 # CONFIG_CMDLINE_FORCE is not set
-CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE=y
+#CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE is not set
 
 #
 # Userspace binary formats
